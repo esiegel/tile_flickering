@@ -4,7 +4,7 @@
 
 When attempting to render multiple TileLayers on top of one another there is additive color
 flickering. My guess is that this is most likely due to a non fixed number of tiles being
-rendered over a given pixel.  
+rendered over a given pixel.
 
 Looking at the code you will see the GL blending parameters.
 
@@ -29,6 +29,8 @@ blending per layer based on some rudimentory logic.  This seemed to not work, so
 now it just renders the TileLayers.
 
 You should see the three circles on top of one another.
+
+This demo was created to help with this discussion: https://github.com/visgl/deck.gl/discussions/5862
 
 # How to run
 
