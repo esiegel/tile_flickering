@@ -12,7 +12,12 @@ import GL from "@luma.gl/constants";
 import { ImageLoader } from "@loaders.gl/images";
 import { load } from "@loaders.gl/core";
 
-function createTileLayer(path) {
+function tileURL(path, z, x, y) {
+  const base = process.env.PUBLIC_URL;
+  return `${base}${path}/${z}/${x}_${y}.png`;
+}
+
+function createTileLayer(paths) {
   // hard code image dimensions
   const imageWidth = 8000;
   const imageHeight = 8000;
@@ -31,27 +36,45 @@ function createTileLayer(path) {
         return null;
       }
 
-      const base = process.env.PUBLIC_URL;
-      const url = `${base}${path}/${z + maxDzi}/${x}_${y}.png`;
-      return load(url, ImageLoader);
+      return Promise.all(
+        paths.map((path) => {
+          return load(tileURL(path, z + maxDzi, x, y), ImageLoader);
+        })
+      );
     },
 
-    id: `TileLayer-${path}`,
+    id: `TileLayer-${paths[0]}`,
     maxZoom: 0,
     minZoom: minDzi - maxDzi,
 
     onTileUnload: (tile) => console.log("UNLOAD", tile),
     onTileError: (error) => console.log("ERROR", error),
 
+    maxRequests: 0,
+
     renderSubLayers(props) {
       const {
         bbox: { bottom, left, right, top },
       } = props.tile;
 
-      const image = props.data;
-      if (image == null) {
+      const images = props.data;
+      if (images == null) {
         return [];
       }
+
+      const image = images[0];
+
+      // create canvas for manipulation
+      const canvas = new OffscreenCanvas(image.width, image.height);
+      const ctx = canvas.getContext("2d");
+      ctx.globalCompositeOperation = "lighter";
+      ctx.filter = "opacity(100%)";
+      ctx.drawImage(images[0], 0, 0);
+      ctx.filter = "opacity(100%)";
+      ctx.drawImage(images[1], 0, 0);
+      ctx.filter = "opacity(100%)";
+      ctx.drawImage(images[2], 0, 0);
+      const imageData = ctx.getImageData(0, 0, image.width, image.height);
 
       // sometimes our tiles are more than 512px?
       const tileWidth = Math.max(512, image.width);
@@ -67,14 +90,7 @@ function createTileLayer(path) {
         _imageCoordinateSystem: COORDINATE_SYSTEM.CARTESIAN,
         bounds: [left, top + boxHeight, left + boxWidth, top],
         data: null,
-        image,
-        parameters: {
-          [GL.BLEND]: true,
-          [GL.BLEND_DST_RGB]: GL.ONE,
-          [GL.BLEND_EQUATION]: GL.FUNC_ADD,
-          [GL.BLEND_SRC_RGB]: GL.ONE,
-          [GL.DEPTH_TEST]: false,
-        },
+        image: imageData,
       });
     },
 
@@ -90,12 +106,8 @@ function App() {
   const GL_OPTIONS = { webgl2: true };
 
   function onViewStateChange(state: { viewState: ViewState }) {
-    console.log(state);
     setViewState(state.viewState);
   }
-
-  const height = 1000;
-  const width = 1000;
 
   const views = useMemo(
     () => [
@@ -111,9 +123,11 @@ function App() {
   );
 
   const layers = [
-    createTileLayer("/red_circle/red_circle_files"),
-    createTileLayer("/blue_circle/blue_circle_files"),
-    createTileLayer("/yellow_circle/yellow_circle_files"),
+    createTileLayer([
+      "/red_circle/red_circle_files",
+      "/blue_circle/blue_circle_files",
+      "/yellow_circle/yellow_circle_files",
+    ]),
   ];
 
   return (
