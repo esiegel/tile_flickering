@@ -1,5 +1,7 @@
 # TileLayer flickering
 
+<img src="/public/static_circles.png" width="500">
+
 When attempting to render multiple TileLayers on top of one another there is additive color
 flickering. My guess is that this is most likely due to a non fixed number of tiles being
 rendered over a given pixel.  
