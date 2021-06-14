@@ -36,4 +36,4 @@ This project was bootstrapped with [Create React App](https://github.com/faceboo
 
 Run the below to see the demo:
 
-    `yarn start`
+    yarn start
